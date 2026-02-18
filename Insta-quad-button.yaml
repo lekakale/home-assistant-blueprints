@@ -361,7 +361,7 @@ action:
       button3_max_iterations: !input button3_holding_max_iterations
       button4_max_iterations: !input button4_holding_max_iterations
 
-  - parallel:
+    - parallel:
       - repeat:
           while:
             - condition: template
@@ -513,4 +513,5 @@ action:
               - condition: template
                 value_template: >
                   {{ trigger_id == 'button4' and press_type == 'long_release' }}
+
             sequence: !input button4_long_release
