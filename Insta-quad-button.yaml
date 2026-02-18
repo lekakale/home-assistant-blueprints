@@ -36,7 +36,7 @@ blueprint:
     * Blueprint Exchange: [IKEA BILRESA Dual Button](https://community.home-assistant.io/t/ikea-bilresa-dual-button-remote/965815)
 
   domain: automation
-  source_url: https://github.com/lekakale/home-assistant-blueprints/blob/main/Insta-quad-button.yaml
+  source_url: https://raw.githubusercontent.com/lekakale/home-assistant-blueprints/refs/heads/main/Insta-quad-button.yaml
   homeassistant:
     min_version: 2025.12.0
 
@@ -515,4 +515,5 @@ action:
                   {{ trigger_id == 'button4' and press_type == 'long_release' }}
 
             sequence: !input button4_long_release
+
 
