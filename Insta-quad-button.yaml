@@ -1,7 +1,7 @@
 mode: restart
 blueprint:
   name: INSTA Quad Button
-  author: Skaronator
+  author: Lekakale, adapted from Skaronator
   description: |
     # INSTA Quad Button Remote Automation
 
@@ -353,7 +353,7 @@ condition:
       {{ trigger.from_state.state != trigger.to_state.state }}
 
 action:
-    - variables:
+  - variables:
       trigger_id: "{{ trigger.id }}"
       press_type: "{{ trigger.to_state.attributes.event_type }}"
       button1_max_iterations: !input button1_holding_max_iterations
@@ -361,7 +361,7 @@ action:
       button3_max_iterations: !input button3_holding_max_iterations
       button4_max_iterations: !input button4_holding_max_iterations
 
-    - parallel:
+  - parallel:
       - repeat:
           while:
             - condition: template
