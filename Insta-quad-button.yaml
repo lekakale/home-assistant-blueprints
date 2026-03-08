@@ -5,7 +5,7 @@ blueprint:
   description: |
     # INSTA Quad Button Remote Automation
 
-    ## Current Version 1.0.0
+    ## Current Version 1.1.0
 
     ## Features
 
@@ -15,6 +15,7 @@ blueprint:
 
     * Single Press
     * Double Press
+    * Triple Press
     * Long Press (on press and release)
     * While Holding (with configurable interval)
 
@@ -24,6 +25,9 @@ blueprint:
     * Safety limit on maximum iterations for "while holding" actions to prevent infinite loops.
 
     ## Changelog
+
+    ### 1.1.0
+      - Add support for triple press actions
 
     ### 1.0.0
       - Initial release with support for all button actions.
@@ -99,6 +103,13 @@ blueprint:
           selector:
             action: {}
 
+        button1_triple:
+          name: Triple Press
+          description: Action for Button 1 triple press.
+          default: []
+          selector:
+            action: {}
+
         button1_long_press:
           name: Long Press (on press)
           description: Action for Button 1 long press completion.
@@ -157,6 +168,13 @@ blueprint:
         button2_double:
           name: Double Press
           description: Action for Button 2 double press.
+          default: []
+          selector:
+            action: {}
+
+        button2_triple:
+          name: Triple Press
+          description: Action for Button 2 triple press.
           default: []
           selector:
             action: {}
@@ -223,6 +241,13 @@ blueprint:
           selector:
             action: {}
 
+        button3_triple:
+          name: Triple Press
+          description: Action for Button 3 triple press.
+          default: []
+          selector:
+            action: {}
+
         button3_long_press:
           name: Long Press (on press)
           description: Action for Button 3 long press completion.
@@ -281,6 +306,13 @@ blueprint:
         button4_double:
           name: Double Press
           description: Action for Button 4 double press.
+          default: []
+          selector:
+            action: {}
+
+        button4_triple:
+          name: Triple Press
+          description: Action for Button 4 triple press.
           default: []
           selector:
             action: {}
@@ -431,6 +463,12 @@ action:
           - conditions:
               - condition: template
                 value_template: >
+                  {{ trigger_id == 'button1' and press_type == 'multi_press_3' }}
+            sequence: !input button1_triple
+
+          - conditions:
+              - condition: template
+                value_template: >
                   {{ trigger_id == 'button1' and press_type == 'long_press' }}
             sequence: !input button1_long_press
 
@@ -452,6 +490,12 @@ action:
                 value_template: >
                   {{ trigger_id == 'button2' and press_type == 'multi_press_2' }}
             sequence: !input button2_double
+
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ trigger_id == 'button2' and press_type == 'multi_press_3' }}
+            sequence: !input button2_triple
 
           - conditions:
               - condition: template
@@ -481,6 +525,12 @@ action:
           - conditions:
               - condition: template
                 value_template: >
+                  {{ trigger_id == 'button3' and press_type == 'multi_press_3' }}
+            sequence: !input button3_triple
+
+          - conditions:
+              - condition: template
+                value_template: >
                   {{ trigger_id == 'button3' and press_type == 'long_press' }}
             sequence: !input button3_long_press
 
@@ -502,6 +552,12 @@ action:
                 value_template: >
                   {{ trigger_id == 'button4' and press_type == 'multi_press_2' }}
             sequence: !input button4_double
+
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ trigger_id == 'button4' and press_type == 'multi_press_3' }}
+            sequence: !input button4_triple
 
           - conditions:
               - condition: template
