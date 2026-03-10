@@ -1,0 +1,222 @@
+mode: restart
+blueprint:
+  name: Brightness Based Cover (3 Ranges)
+  author: GitHub Copilot
+  description: |
+    Adjust a cover based on a brightness sensor using 3 configurable ranges.
+    Each range sets a cover position and tilt position.
+
+    Notes:
+    - Make sure threshold_1 < threshold_2.
+    - Hysteresis reduces flapping near thresholds.
+
+  domain: automation
+  input:
+    brightness_sensor:
+      name: Brightness Sensor
+      description: Entity providing brightness (e.g., lux).
+      selector:
+        entity:
+          filter:
+            domain: sensor
+
+    cover_entity:
+      name: Cover Entity
+      description: Cover to control.
+      selector:
+        entity:
+          filter:
+            domain: cover
+
+    thresholds:
+      name: Brightness Thresholds
+      description: Configure thresholds and hysteresis for the 3 ranges.
+      collapsed: true
+      input:
+        threshold_1:
+          name: Grenze 1 (Dunkel -> Dämmerung)
+          description: Dämmerung startet über diesem Wert.
+          default: 20
+          selector:
+            number:
+              min: 0
+              max: 200000
+              step: 1
+              unit_of_measurement: lx
+
+        threshold_2:
+          name: Grenze 2 (Dämmerung -> Hell)
+          description: Tageslicht startet über diesem Wert.
+          default: 600
+          selector:
+            number:
+              min: 0
+              max: 200000
+              step: 1
+              unit_of_measurement: lx
+
+        hysteresis:
+          name: Hysteresis
+          description: Buffer around thresholds to avoid frequent toggling.
+          default: 25
+          selector:
+            number:
+              min: 0
+              max: 20000
+              step: 1
+              unit_of_measurement: lx
+
+    positions:
+      name: Target Positions
+      description: Position and tilt (0-100) per brightness range.
+      collapsed: true
+      input:
+        position_low:
+          name: Dunkel - Höhe
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+
+        tilt_low:
+          name: Dunkel - Neigung
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+
+        position_mid:
+          name: Dämmerung - Höhe
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+
+        tilt_mid:
+          name: Dämmerung - Neigung
+          default: 35
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+
+        position_high:
+          name: Hell - Höhe
+          default: 100
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+
+        tilt_high:
+          name: Hell - Neigung
+          default: 100
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+
+trigger:
+  - platform: state
+    entity_id: !input brightness_sensor
+
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.to_state.state not in ['unknown', 'unavailable'] }}
+  - condition: template
+    value_template: >
+      {{ trigger.from_state.state not in ['unknown', 'unavailable'] }}
+  - condition: template
+    value_template: >
+      {{ trigger.from_state.state != trigger.to_state.state }}
+
+action:
+  - variables:
+      brightness: "{{ trigger.to_state.state | float(0) }}"
+      prev_brightness: "{{ trigger.from_state.state | float(0) }}"
+      t1: !input threshold_1
+      t2: !input threshold_2
+      h: !input hysteresis
+      prev_range: >
+        {% if prev_brightness >= t2 %}
+          high
+        {% elif prev_brightness <= t1 %}
+          low
+        {% else %}
+          mid
+        {% endif %}
+      target_range: >
+        {% if brightness >= (t2 + h) %}
+          high
+        {% elif brightness <= (t1 - h) %}
+          low
+        {% elif brightness >= (t1 + h) and brightness <= (t2 - h) %}
+          mid
+        {% else %}
+          {{ prev_range }}
+        {% endif %}
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ target_range == 'low' }}
+        sequence:
+          - service: cover.set_cover_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              position: !input position_low
+          - service: cover.set_cover_tilt_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              tilt_position: !input tilt_low
+
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ target_range == 'mid' }}
+        sequence:
+          - service: cover.set_cover_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              position: !input position_mid
+          - service: cover.set_cover_tilt_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              tilt_position: !input tilt_mid
+
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ target_range == 'high' }}
+        sequence:
+          - service: cover.set_cover_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              position: !input position_high
+          - service: cover.set_cover_tilt_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              tilt_position: !input tilt_high
