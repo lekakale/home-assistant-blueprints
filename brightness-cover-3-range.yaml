@@ -1,14 +1,27 @@
 mode: restart
 blueprint:
-  name: Brightness Based Cover (3 Ranges)
-  author: GitHub Copilot
+  name: Storenautomatik 3 Phasen
+  author: Lekakale
   description: |
-    Adjust a cover based on a brightness sensor using 3 configurable ranges.
-    Each range sets a cover position and tilt position.
+    Passe eine Jalousie basierend auf einem Helligkeitssensor in 3 konfigurierbaren Bereichen an.
+    Jeder Bereich legt eine Position und Neigung der Jalousie fest.
 
-    Notes:
-    - Make sure threshold_1 < threshold_2.
-    - Hysteresis reduces flapping near thresholds.
+    ## Current Version 1.0.0
+
+    ## Features
+
+    * Automatic adjustment of the cover when the brightness changes and crosses thresholds.
+
+    ## Configuration Options
+
+    * Configurable brightness thresholds with hysteresis to define the 3 ranges (dark, twilight, bright).
+    * Separate target position and tilt for each brightness range.
+
+
+    ## Changelog
+
+    ### 1.0.0
+      - Initial release
 
   domain: automation
   input:
@@ -22,9 +35,10 @@ blueprint:
 
     cover_entity:
       name: Cover Entity
-      description: Cover to control.
+      description: Cover(s) to control.
       selector:
         entity:
+          multiple: true
           filter:
             domain: cover
 
