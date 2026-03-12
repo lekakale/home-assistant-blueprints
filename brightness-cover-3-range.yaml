@@ -6,7 +6,7 @@ blueprint:
     Passe eine Jalousie basierend auf einem Helligkeitssensor in 3 konfigurierbaren Bereichen an.
     Jeder Bereich legt eine Position und Neigung der Jalousie fest.
 
-    ## Current Version 1.0.0
+    ## Current Version 1.1.0
 
     ## Features
 
