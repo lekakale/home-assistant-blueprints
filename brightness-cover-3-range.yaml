@@ -20,6 +20,9 @@ blueprint:
 
     ## Changelog
 
+    ### 1.1.0
+      - Add hysteresis to both thresholds
+
     ### 1.0.0
       - Initial release
 
@@ -58,6 +61,17 @@ blueprint:
               step: 1
               unit_of_measurement: lx
 
+        hysteresis_1:
+          name: Hysteresis Grenze 1
+          description: Buffer around thresholds to avoid frequent toggling.
+          default: 25
+          selector:
+            number:
+              min: 0
+              max: 20000
+              step: 1
+              unit_of_measurement: lx
+
         threshold_2:
           name: Grenze 2 (Dämmerung -> Hell)
           description: Tageslicht startet über diesem Wert.
@@ -69,8 +83,8 @@ blueprint:
               step: 1
               unit_of_measurement: lx
 
-        hysteresis:
-          name: Hysteresis
+        hysteresis_2:
+          name: Hysteresis Grenze 2
           description: Buffer around thresholds to avoid frequent toggling.
           default: 25
           selector:
@@ -166,7 +180,8 @@ action:
       prev_brightness: "{{ trigger.from_state.state | float(0) }}"
       t1: !input threshold_1
       t2: !input threshold_2
-      h: !input hysteresis
+      h1: !input hysteresis_1
+      h2: !input hysteresis_2
       prev_range: >
         {% if prev_brightness >= t2 %}
           high
@@ -176,11 +191,11 @@ action:
           mid
         {% endif %}
       target_range: >
-        {% if brightness >= (t2 + h) %}
+        {% if brightness >= (t2 + h2) %}
           high
-        {% elif brightness <= (t1 - h) %}
+        {% elif brightness <= (t1 - h1) %}
           low
-        {% elif brightness >= (t1 + h) and brightness <= (t2 - h) %}
+        {% elif brightness >= (t1 + h1) and brightness <= (t2 - h2) %}
           mid
         {% else %}
           {{ prev_range }}
