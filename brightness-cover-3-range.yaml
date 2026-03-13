@@ -6,19 +6,26 @@ blueprint:
     Passe eine Jalousie basierend auf einem Helligkeitssensor in 3 konfigurierbaren Bereichen an.
     Jeder Bereich legt eine Position und Neigung der Jalousie fest.
 
-    ## Current Version 1.1.0
+    **Voraussetzung:** Einen `Eingabetext`-Helfer unter
+    Einstellungen → Geräte & Dienste → Helfer anlegen und unten als State Helper eintragen.
+    Dieser Helfer speichert den aktuellen Bereich (low/mid/high) zwischen den Automatisierungsläufen.
+
+    ## Current Version 1.2.0
 
     ## Features
-
-    * Automatic adjustment of the cover when the brightness changes and crosses thresholds.
 
     ## Configuration Options
 
     * Configurable brightness thresholds with hysteresis to define the 3 ranges (dark, twilight, bright).
     * Separate target position and tilt for each brightness range.
+    * An input_text helper entity to persist the current brightness range across automation runs.
 
 
     ## Changelog
+
+    ### 1.2.0
+      - Proper state-machine hysteresis: action fires only when threshold is actually crossed
+      - Requires an input_text helper to persist the current range
 
     ### 1.1.0
       - Add hysteresis to both thresholds
@@ -44,6 +51,16 @@ blueprint:
           multiple: true
           filter:
             domain: cover
+
+    state_helper:
+      name: State Helper
+      description: >
+        Ein `input_text`-Helfer zur Speicherung des aktuellen Bereichs (low / mid / high).
+        Muss einmalig unter Einstellungen → Geräte & Dienste → Helfer als „Eingabetext" angelegt werden.
+      selector:
+        entity:
+          filter:
+            domain: input_text
 
     thresholds:
       name: Brightness Thresholds
@@ -177,35 +194,47 @@ condition:
 action:
   - variables:
       brightness: "{{ trigger.to_state.state | float(0) }}"
-      prev_brightness: "{{ trigger.from_state.state | float(0) }}"
       t1: !input threshold_1
       t2: !input threshold_2
       h1: !input hysteresis_1
       h2: !input hysteresis_2
-      prev_range: >
-        {% if prev_brightness >= t2 %}
-          high
-        {% elif prev_brightness <= t1 %}
-          low
-        {% else %}
-          mid
-        {% endif %}
+      range_helper: !input state_helper
+      current_range: "{{ states(range_helper) }}"
+      # Zustandsmaschine: Bereichswechsel nur wenn Schwellenwert inkl. Hysterese vollständig überschritten.
+      # Direktsprung (z. B. high → low) ist möglich wenn die Helligkeit weit genug abfällt.
       target_range: >
-        {% if brightness >= (t2 + h2) %}
-          high
-        {% elif brightness <= (t1 - h1) %}
-          low
-        {% elif brightness >= (t1 + h1) and brightness <= (t2 - h2) %}
-          mid
+        {% set cr = current_range if current_range in ['low', 'mid', 'high'] else 'none' %}
+        {% if cr == 'high' %}
+          {% if   brightness <= (t1 - h1) %}low
+          {% elif brightness <= (t2 - h2) %}mid
+          {% else                         %}high
+          {% endif %}
+        {% elif cr == 'low' %}
+          {% if   brightness >= (t2 + h2) %}high
+          {% elif brightness >= (t1 + h1) %}mid
+          {% else                         %}low
+          {% endif %}
+        {% elif cr == 'mid' %}
+          {% if   brightness >= (t2 + h2) %}high
+          {% elif brightness <= (t1 - h1) %}low
+          {% else                         %}mid
+          {% endif %}
         {% else %}
-          {{ prev_range }}
+          {# Initialzustand: Helfer leer – Bereich aus aktueller Helligkeit ableiten #}
+          {% if   brightness >= (t2 + h2) %}high
+          {% elif brightness <= (t1 - h1) %}low
+          {% else                         %}mid
+          {% endif %}
         {% endif %}
+
+  # Nur fortfahren wenn sich der Bereich tatsächlich geändert hat
+  - condition: template
+    value_template: "{{ target_range != current_range }}"
 
   - choose:
       - conditions:
           - condition: template
-            value_template: >
-              {{ target_range == 'low' }}
+            value_template: "{{ target_range == 'low' }}"
         sequence:
           - service: cover.set_cover_position
             target:
@@ -220,8 +249,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: >
-              {{ target_range == 'mid' }}
+            value_template: "{{ target_range == 'mid' }}"
         sequence:
           - service: cover.set_cover_position
             target:
@@ -236,8 +264,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: >
-              {{ target_range == 'high' }}
+            value_template: "{{ target_range == 'high' }}"
         sequence:
           - service: cover.set_cover_position
             target:
@@ -249,3 +276,11 @@ action:
               entity_id: !input cover_entity
             data:
               tilt_position: !input tilt_high
+
+  # Aktuellen Bereich im Helfer speichern (nach den Cover-Befehlen, damit bei einem Abbruch
+  # der nächste Lauf den Befehl wiederholt statt einen falschen Zustand zu übernehmen)
+  - service: input_text.set_value
+    target:
+      entity_id: !input state_helper
+    data:
+      value: "{{ target_range }}"
