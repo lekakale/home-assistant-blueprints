@@ -1,0 +1,48 @@
+blueprint:
+  name: Auto Aus nach X Minuten
+  author: Lekakale
+  description: |
+    Schaltet eine ausgewaehlte Entitaet automatisch aus,
+    wenn sie fuer eine konfigurierbare Zeit auf "on" steht.
+
+    ## Current Version 1.0.0
+
+    ## Changelog
+
+    ### 1.0.0
+      - Initial release
+
+  domain: automation
+  input:
+    target_entity:
+      name: Entitaet
+      description: Entitaet, die bei Zustand "on" nach der Zeit ausgeschaltet wird.
+      selector:
+        entity: {}
+
+    duration_minutes:
+      name: Zeitdauer (Minuten)
+      description: Anzahl Minuten bis zum automatischen Ausschalten.
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 1440
+          step: 1
+          unit_of_measurement: min
+
+trigger:
+  - platform: state
+    entity_id: !input target_entity
+    to: "on"
+    for:
+      minutes: !input duration_minutes
+
+condition: []
+
+action:
+  - service: homeassistant.turn_off
+    target:
+      entity_id: !input target_entity
+
+mode: single
