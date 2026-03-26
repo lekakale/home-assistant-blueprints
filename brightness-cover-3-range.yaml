@@ -10,7 +10,7 @@ blueprint:
     Einstellungen → Geräte & Dienste → Helfer anlegen und unten als State Helper eintragen.
     Dieser Helfer speichert den aktuellen Bereich (low/mid/high) zwischen den Automatisierungsläufen.
 
-    ## Current Version 1.2.0
+    ## Current Version 1.3.0
 
     ## Features
 
@@ -18,10 +18,14 @@ blueprint:
 
     * Configurable brightness thresholds with hysteresis to define the 3 ranges (dark, twilight, bright).
     * Separate target position and tilt for each brightness range.
+    * Configurable earliest transition times for each range change to prevent unwanted movements during the night or early morning.
     * An input_text helper entity to persist the current brightness range across automation runs.
 
 
     ## Changelog
+
+    ### 1.3.0
+      - Add earliest transition times
 
     ### 1.2.0
       - Proper state-machine hysteresis: action fires only when threshold is actually crossed
@@ -110,6 +114,47 @@ blueprint:
               max: 20000
               step: 1
               unit_of_measurement: lx
+
+    transition_times:
+      name: Earliest Transition Times
+      description: Frühester Zeitpunkt pro Bereichswechsel.
+      collapsed: true
+      input:
+        earliest_low_to_mid:
+          name: low -> mid ab
+          default: "00:00:00"
+          selector:
+            time: {}
+
+        earliest_mid_to_high:
+          name: mid -> high ab
+          default: "00:00:00"
+          selector:
+            time: {}
+
+        earliest_high_to_mid:
+          name: high -> mid ab
+          default: "00:00:00"
+          selector:
+            time: {}
+
+        earliest_mid_to_low:
+          name: mid -> low ab
+          default: "00:00:00"
+          selector:
+            time: {}
+
+        earliest_low_to_high:
+          name: low -> high ab
+          default: "00:00:00"
+          selector:
+            time: {}
+
+        earliest_high_to_low:
+          name: high -> low ab
+          default: "00:00:00"
+          selector:
+            time: {}
 
     positions:
       name: Target Positions
@@ -227,9 +272,33 @@ action:
           {% endif %}
         {% endif %}
 
+      earliest_low_to_mid: !input earliest_low_to_mid
+      earliest_mid_to_high: !input earliest_mid_to_high
+      earliest_high_to_mid: !input earliest_high_to_mid
+      earliest_mid_to_low: !input earliest_mid_to_low
+      earliest_low_to_high: !input earliest_low_to_high
+      earliest_high_to_low: !input earliest_high_to_low
+
+      transition_allowed: >
+        {% if current_range == 'low' and target_range == 'mid' %}
+          {{ now() >= today_at(earliest_low_to_mid) }}
+        {% elif current_range == 'mid' and target_range == 'high' %}
+          {{ now() >= today_at(earliest_mid_to_high) }}
+        {% elif current_range == 'high' and target_range == 'mid' %}
+          {{ now() >= today_at(earliest_high_to_mid) }}
+        {% elif current_range == 'mid' and target_range == 'low' %}
+          {{ now() >= today_at(earliest_mid_to_low) }}
+        {% elif current_range == 'low' and target_range == 'high' %}
+          {{ now() >= today_at(earliest_low_to_high) }}
+        {% elif current_range == 'high' and target_range == 'low' %}
+          {{ now() >= today_at(earliest_high_to_low) }}
+        {% else %}
+          true
+        {% endif %}
+
   # Nur fortfahren wenn sich der Bereich tatsächlich geändert hat
   - condition: template
-    value_template: "{{ target_range != current_range }}"
+    value_template: "{{ target_range != current_range and transition_allowed }}"
 
   - choose:
       - conditions:
